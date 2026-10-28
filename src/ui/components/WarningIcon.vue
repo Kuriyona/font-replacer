@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { CircleAlert } from "@lucide/vue";
+import { Icon, Tooltip } from "@sharpdotnut/dotsharp";
+import warningIcon from "@iconify-icons/material-symbols/warning";
 
 defineProps<{ message: string }>();
 </script>
 
 <template>
-  <span class="inline-flex text-danger" :title="message">
-    <CircleAlert class="size-4" aria-hidden="true" />
-    <span class="sr-only">{{ message }}</span>
-  </span>
+  <Tooltip :label="message">
+    <Icon :icon="warningIcon" size="1.1em" :label="message" class="text-ds-error" />
+  </Tooltip>
 </template>

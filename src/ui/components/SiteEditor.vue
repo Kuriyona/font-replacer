@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { Button, FormItem, Input, Option, Select } from "@sharpdotnut/dotsharp";
 import type { Rule, SiteRule } from "@/shared/types";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import RuleOrderList from "./RuleOrderList.vue";
@@ -24,6 +25,8 @@ const available = computed(() =>
   props.rules.filter((rule) => rule.enabled && !site.value.ruleIds.includes(rule.id)),
 );
 
+const pickValue = ref<string | number>("");
+
 const move = (index: number, delta: number): void => {
   const target = index + delta;
   if (target < 0 || target >= assignedIds.value.length) return;
@@ -43,10 +46,13 @@ const remove = (index: number): void => {
   };
 };
 
-const addRule = (event: Event): void => {
-  const select = event.target as HTMLSelectElement;
-  const id = select.value;
-  select.value = "";
+const setMatch = (value: string | number): void => {
+  site.value = { ...site.value, match: value === "domain" ? "domain" : "host" };
+};
+
+const addRule = (value: string | number): void => {
+  const id = String(value);
+  pickValue.value = "";
   if (id === "" || site.value.ruleIds.includes(id)) return;
   site.value = { ...site.value, ruleIds: [...site.value.ruleIds, id] };
 };
@@ -56,18 +62,15 @@ const addRule = (event: Event): void => {
   <div class="space-y-4">
     <SectionCard title="作用范围">
       <div class="grid gap-3 sm:grid-cols-[1fr_10rem]">
-        <div>
-          <label class="label" for="site-pattern">主机名或域名</label>
-          <input id="site-pattern" v-model="site.pattern" class="input" />
-          <p class="hint">修改后保存会迁移到新的作用范围键。</p>
-        </div>
-        <div>
-          <label class="label" for="site-match">匹配方式</label>
-          <select id="site-match" v-model="site.match" class="input">
-            <option value="host">主机（精确）</option>
-            <option value="domain">域名及子域</option>
-          </select>
-        </div>
+        <Input
+          v-model="site.pattern"
+          label="主机名或域名"
+          description="修改后保存会迁移到新的作用范围键。"
+        />
+        <Select label="匹配方式" :value="site.match" @update:value="setMatch">
+          <Option label="主机（精确）" value="host" />
+          <Option label="域名及子域" value="domain" />
+        </Select>
       </div>
     </SectionCard>
 
@@ -79,17 +82,17 @@ const addRule = (event: Event): void => {
         @remove="remove"
       />
       <div class="mt-3">
-        <label class="label" for="site-add-rule">添加规则</label>
-        <select
-          id="site-add-rule"
-          class="input"
-          :disabled="available.length === 0"
-          @change="addRule"
-        >
-          <option value="">{{ available.length ? "选择一条规则…" : "没有可添加的规则" }}</option>
-          <option v-for="rule in available" :key="rule.id" :value="rule.id">{{ rule.name }}</option>
-        </select>
-        <p class="hint">靠前的规则优先；同一元素只应用第一条命中的规则。</p>
+        <FormItem description="靠前的规则优先；同一元素只应用第一条命中的规则。">
+          <Select
+            label="添加规则"
+            :value="pickValue"
+            placeholder="选择一条规则…"
+            :disabled="available.length === 0"
+            @update:value="addRule"
+          >
+            <Option v-for="rule in available" :key="rule.id" :label="rule.name" :value="rule.id" />
+          </Select>
+        </FormItem>
       </div>
     </SectionCard>
 
@@ -101,11 +104,11 @@ const addRule = (event: Event): void => {
         @confirm="emit('delete')"
       >
         <template #trigger>
-          <button type="button" class="btn btn-danger">删除</button>
+          <Button variant="text" size="sm" class="text-ds-error!">删除</Button>
         </template>
       </ConfirmDialog>
-      <button type="button" class="btn" @click="emit('cancel')">取消</button>
-      <button type="button" class="btn btn-primary" @click="emit('save')">保存</button>
+      <Button variant="text" size="sm" @click="emit('cancel')">取消</Button>
+      <Button size="sm" @click="emit('save')">保存</Button>
     </div>
   </div>
 </template>

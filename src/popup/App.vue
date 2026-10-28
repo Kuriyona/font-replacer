@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from "@lucide/vue";
+import { Button, Icon, Option, Progress, Select } from "@sharpdotnut/dotsharp";
+import addIcon from "@iconify-icons/material-symbols/add";
+import arrowDownIcon from "@iconify-icons/material-symbols/arrow-downward";
+import arrowUpIcon from "@iconify-icons/material-symbols/arrow-upward";
+import deleteIcon from "@iconify-icons/material-symbols/delete";
+import openInNewIcon from "@iconify-icons/material-symbols/open-in-new";
 import { missingFontIssues, probeLocalFont } from "@/content/issues";
 import { resolveSiteRules } from "@/shared/rules";
 import { findEffectiveSite } from "@/shared/sites";
@@ -8,6 +13,7 @@ import { toRegistrableDomain } from "@/shared/site-domains";
 import { ensureBuiltinRules, loadConfig, saveSite, subscribeConfig } from "@/shared/storage";
 import type { PageIssue, Rule, SiteRule } from "@/shared/types";
 import ConfirmDialog from "@/ui/components/ConfirmDialog.vue";
+import IconAction from "@/ui/components/IconAction.vue";
 import IssueBanner from "@/ui/components/IssueBanner.vue";
 
 const rules = ref<Rule[]>([]);
@@ -19,6 +25,7 @@ const error = ref("");
 const loading = ref(true);
 const issues = ref<PageIssue[]>([]);
 const adding = ref(false);
+const pickValue = ref<string | number>("");
 
 let unsubscribe: (() => void) | null = null;
 
@@ -50,6 +57,9 @@ const hostSite = computed(() =>
 const registrableDomain = computed(() => toRegistrableDomain(hostname.value));
 const domainOverridesHost = computed(
   () => site.value?.match === "domain" && hostname.value !== site.value.pattern,
+);
+const addPlaceholder = computed(() =>
+  availableRules.value.length > 0 ? "选择规则…" : "没有可添加的规则",
 );
 
 const openOptions = (hash?: string): void => {
@@ -162,10 +172,9 @@ function removeRule(index: number): void {
   });
 }
 
-function addRule(event: Event): void {
-  const select = event.target as HTMLSelectElement;
-  const id = select.value;
-  select.value = "";
+function addRule(value: string | number): void {
+  const id = String(value);
+  pickValue.value = "";
   adding.value = false;
   const current = site.value;
   if (!current || id === "") return;
@@ -211,33 +220,36 @@ onUnmounted(() => {
 
 <template>
   <div class="w-[380px] p-3 text-sm">
-    <header class="mb-2 flex items-center justify-between gap-2">
-      <h1 class="text-sm font-semibold">Font Refine</h1>
-      <span class="truncate text-xs text-muted">{{ hostname }}</span>
+    <header class="mb-3 flex items-center justify-between gap-2">
+      <h1 class="text-base font-medium">Font Refine</h1>
+      <span class="truncate text-xs text-ds-muted">{{ hostname }}</span>
     </header>
 
     <p
       v-if="error"
-      class="mb-2 rounded border border-danger bg-danger-soft px-2 py-1 text-xs text-danger"
+      class="mb-2 rounded-ds-sm border border-ds-error bg-ds-error/8 px-2 py-1 text-xs text-ds-error!"
     >
       {{ error }}
     </p>
 
-    <p v-if="loading" class="text-xs text-muted">加载中…</p>
+    <div v-if="loading" class="space-y-2">
+      <Progress indeterminate label="加载中" />
+      <p class="text-xs text-ds-muted">加载中…</p>
+    </div>
 
     <div v-else-if="!supported" class="space-y-2">
-      <p class="text-xs text-muted">此页面不支持字体替换（仅支持 http/https 页面）。</p>
-      <button type="button" class="btn" @click="openOptions()">
-        <ExternalLink class="size-3.5" aria-hidden="true" />
+      <p class="text-xs text-ds-muted">此页面不支持字体替换（仅支持 http/https 页面）。</p>
+      <Button variant="tonal" size="sm" @click="openOptions()">
+        <Icon :icon="openInNewIcon" />
         管理规则与站点
-      </button>
+      </Button>
     </div>
 
     <div v-else class="space-y-3">
       <IssueBanner :issues="issues" @select="(issue) => openOptions(issueHash(issue))" />
 
       <div v-if="site" class="space-y-2">
-        <p class="text-xs text-muted">
+        <p class="text-xs text-ds-muted">
           作用范围：{{ site.pattern }}（{{ site.match === "host" ? "主机" : "域名及子域" }}）
         </p>
 
@@ -245,34 +257,28 @@ onUnmounted(() => {
           <li
             v-for="entry in assignedEntries"
             :key="entry.id"
-            class="flex items-center gap-1.5 rounded border border-border px-2 py-1.5"
+            class="flex items-center gap-1.5 rounded-ds-sm border border-ds-line bg-ds-surface px-2 py-1"
           >
-            <span class="w-4 text-center text-xs text-muted">{{ entry.index + 1 }}</span>
+            <span class="w-4 text-center text-xs text-ds-muted">{{ entry.index + 1 }}</span>
             <div class="min-w-0 flex-1">
-              <p class="truncate">{{ entry.rule.name }}</p>
-              <p class="truncate text-xs text-muted">
+              <p class="truncate text-sm">{{ entry.rule.name }}</p>
+              <p class="truncate text-xs text-ds-muted">
                 {{ disabledLabel(entry.rule) }}{{ disabledLabel(entry.rule) ? " · " : ""
                 }}{{ summary(entry.rule) }}
               </p>
             </div>
-            <button
-              type="button"
-              class="btn btn-icon"
-              aria-label="上移"
+            <IconAction
+              :icon="arrowUpIcon"
+              label="上移"
               :disabled="entry.index === 0"
               @click="moveRule(entry.index, -1)"
-            >
-              <ArrowUp class="size-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              class="btn btn-icon"
-              aria-label="下移"
+            />
+            <IconAction
+              :icon="arrowDownIcon"
+              label="下移"
               :disabled="entry.index === site.ruleIds.length - 1"
               @click="moveRule(entry.index, 1)"
-            >
-              <ArrowDown class="size-3.5" aria-hidden="true" />
-            </button>
+            />
             <ConfirmDialog
               title="移除规则"
               description="只解除该站点对这条规则的应用，规则本身仍然保留。"
@@ -280,66 +286,73 @@ onUnmounted(() => {
               @confirm="removeRule(entry.index)"
             >
               <template #trigger>
-                <button type="button" class="btn btn-icon btn-danger" aria-label="移除">
-                  <Trash2 class="size-3.5" aria-hidden="true" />
-                </button>
+                <IconAction :icon="deleteIcon" label="移除" tone="danger" />
               </template>
             </ConfirmDialog>
           </li>
         </ol>
-        <p v-else class="text-xs text-muted">该站点暂不应用任何规则。</p>
+        <p v-else class="text-xs text-ds-muted">该站点暂不应用任何规则。</p>
 
-        <div v-if="adding">
-          <select class="input" :disabled="availableRules.length === 0" @change="addRule">
-            <option value="">{{ availableRules.length ? "选择规则…" : "没有可添加的规则" }}</option>
-            <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
-              {{ rule.name }}
-            </option>
-          </select>
-        </div>
-        <div v-else class="flex flex-wrap gap-1.5">
-          <button type="button" class="btn" @click="adding = true">
-            <Plus class="size-3.5" aria-hidden="true" />
+        <Select
+          v-if="adding"
+          :value="pickValue"
+          :placeholder="addPlaceholder"
+          :disabled="availableRules.length === 0"
+          @update:value="addRule"
+        >
+          <Option
+            v-for="rule in availableRules"
+            :key="rule.id"
+            :label="rule.name"
+            :value="rule.id"
+          />
+        </Select>
+        <div v-else class="flex flex-wrap items-center gap-1.5">
+          <Button variant="tonal" size="sm" @click="adding = true">
+            <Icon :icon="addIcon" />
             添加规则
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="domainOverridesHost && !hostSite"
-            type="button"
-            class="btn"
+            variant="text"
+            size="sm"
             @click="splitHostFromDomain()"
           >
             为当前主机单独配置
-          </button>
+          </Button>
         </div>
-        <p v-if="rules.length === 0" class="text-xs text-muted">
-          还没有规则 ·
-          <button type="button" class="underline" @click="openOptions('new-rule')">新建规则</button>
-        </p>
       </div>
 
       <div v-else class="space-y-1.5">
-        <p class="text-xs text-muted">该站点还没有配置。选择一个作用范围开始：</p>
-        <button type="button" class="btn w-full justify-start" @click="createSite('host')">
+        <p class="text-xs text-ds-muted">该站点还没有配置。选择一个作用范围开始：</p>
+        <Button
+          variant="outlined"
+          size="sm"
+          class="w-full justify-start!"
+          @click="createSite('host')"
+        >
           仅此主机：{{ hostname }}
-        </button>
-        <button
+        </Button>
+        <Button
           v-if="registrableDomain"
-          type="button"
-          class="btn w-full justify-start"
+          variant="outlined"
+          size="sm"
+          class="w-full justify-start!"
           @click="createSite('domain')"
         >
           域名及子域：{{ registrableDomain }}
-        </button>
-        <p v-if="rules.length === 0" class="text-xs text-muted">
-          还没有规则 ·
-          <button type="button" class="underline" @click="openOptions('new-rule')">新建规则</button>
-        </p>
+        </Button>
       </div>
 
-      <button type="button" class="btn w-full justify-center" @click="openOptions()">
-        <ExternalLink class="size-3.5" aria-hidden="true" />
+      <div v-if="rules.length === 0" class="flex items-center gap-1 text-xs text-ds-muted">
+        还没有规则 ·
+        <Button variant="text" size="sm" @click="openOptions('new-rule')">新建规则</Button>
+      </div>
+
+      <Button variant="tonal" size="sm" class="w-full" @click="openOptions()">
+        <Icon :icon="openInNewIcon" />
         管理规则与站点
-      </button>
+      </Button>
     </div>
   </div>
 </template>

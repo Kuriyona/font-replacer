@@ -13,8 +13,11 @@ const label = (issue: PageIssue): string => {
 </script>
 
 <template>
-  <div v-if="issues.length > 0" class="rounded-md border border-danger bg-danger-soft p-3 text-sm">
-    <p class="mb-1 flex items-center gap-1.5 font-semibold text-danger">
+  <div
+    v-if="issues.length > 0"
+    class="rounded-ds-lg border border-ds-error bg-ds-error/8 p-3 text-sm"
+  >
+    <p class="mb-1 flex items-center gap-1.5 font-medium text-ds-error!">
       <WarningIcon :message="`${issues.length} 个警告`" />
       {{ issues.length }} 个警告
     </p>
@@ -22,7 +25,7 @@ const label = (issue: PageIssue): string => {
       <li v-for="(issue, index) in issues" :key="index">
         <button
           type="button"
-          class="w-full text-left text-xs text-danger underline-offset-2 hover:underline"
+          class="w-full rounded-ds-sm text-left text-xs text-ds-error! underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ds-focus"
           @click="emit('select', issue)"
         >
           {{ label(issue) }}

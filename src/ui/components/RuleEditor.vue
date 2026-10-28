@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import {
+  Button,
+  Chip,
+  FormItem,
+  Input,
+  Option,
+  SegmentedButton,
+  SegmentedButtons,
+  Select,
+  Switch,
+} from "@sharpdotnut/dotsharp";
 import { resetBuiltinRule } from "@/shared/builtin-rules";
 import { SELECTOR_PRESETS, presetSelectors } from "@/shared/selector-presets";
 import type { FontCache, Rule, SelectorMode, SelectorPresetId } from "@/shared/types";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import FontStackEditor from "./FontStackEditor.vue";
 import SectionCard from "./SectionCard.vue";
-import ToggleSwitch from "./ToggleSwitch.vue";
 import WarningIcon from "./WarningIcon.vue";
 
 const rule = defineModel<Rule>({ required: true });
@@ -44,9 +54,10 @@ const enabled = computed({
 });
 
 const weight = computed({
-  get: () => (rule.value.fontWeight === undefined ? "" : String(rule.value.fontWeight)),
-  set: (value: string) => {
-    rule.value = { ...rule.value, fontWeight: value === "" ? undefined : Number(value) };
+  get: () => rule.value.fontWeight ?? 0,
+  set: (value: string | number) => {
+    const numeric = Number(value);
+    rule.value = { ...rule.value, fontWeight: numeric === 0 ? undefined : numeric };
   },
 });
 
@@ -75,8 +86,12 @@ const updateSelectorList = (text: string): void => {
   };
 };
 
-const setMode = (mode: SelectorMode): void => {
-  rule.value = { ...rule.value, selectors: { ...rule.value.selectors, mode } };
+const setMode = (value: string | number | (string | number)[] | undefined): void => {
+  if (typeof value !== "string") return;
+  rule.value = {
+    ...rule.value,
+    selectors: { ...rule.value.selectors, mode: value as SelectorMode },
+  };
 };
 
 /** 挂上 / 摘掉预设；预设选择器与自定义选择器合并生效 */
@@ -134,17 +149,10 @@ const usageText = computed(() =>
   <div class="space-y-4">
     <SectionCard title="基本信息">
       <div class="space-y-3">
-        <div>
-          <label class="label" for="rule-name">名称</label>
-          <input id="rule-name" v-model="rule.name" class="input" maxlength="80" />
-        </div>
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm">启用</p>
-            <p class="hint">停用的规则不会应用到任何站点，但仍保留站点里的排序位置。</p>
-          </div>
-          <ToggleSwitch v-model="enabled" />
-        </div>
+        <Input v-model="rule.name" label="名称" :maxlength="80" />
+        <FormItem description="停用的规则不会应用到任何站点，但仍保留站点里的排序位置。">
+          <Switch v-model="enabled" label="启用" />
+        </FormItem>
       </div>
     </SectionCard>
 
@@ -155,7 +163,10 @@ const usageText = computed(() =>
         :cache="props.fontCache"
         @update="updateFonts"
       />
-      <div v-if="props.missing.length" class="mt-2 flex items-center gap-1.5 text-xs text-danger">
+      <div
+        v-if="props.missing.length"
+        class="mt-2 flex items-center gap-1.5 text-xs text-ds-error!"
+      >
         <WarningIcon :message="`${props.missing.length} 个字体在本机未找到`" />
         本机未找到：{{ props.missing.join("、") }}
       </div>
@@ -163,100 +174,76 @@ const usageText = computed(() =>
 
     <SectionCard title="字重与自定义样式">
       <div class="space-y-4">
-        <div>
-          <label class="label" for="rule-weight">字重覆盖</label>
-          <select id="rule-weight" v-model="weight" class="input">
-            <option value="">不覆盖</option>
-            <option v-for="value in WEIGHTS" :key="value" :value="String(value)">
-              {{ value }}
-            </option>
-          </select>
-          <p class="hint">选中后命中范围内的文字统一使用该字重（标题也会被改变）。</p>
-        </div>
-        <div>
-          <label class="label" for="rule-css">自定义 CSS 链接（每行一个）</label>
-          <textarea
-            id="rule-css"
-            class="input font-mono"
-            rows="3"
-            :value="cssText"
-            placeholder="https://example.com/fonts.css"
-            @input="updateCssUrls(($event.target as HTMLTextAreaElement).value)"
-          />
-          <p class="hint">相对字体地址会按 CSS 文件地址重写。</p>
-        </div>
+        <FormItem description="选中后命中范围内的文字统一使用该字重（标题也会被改变）。">
+          <Select label="字重覆盖" :value="weight" @update:value="weight = $event">
+            <Option label="不覆盖" :value="0" />
+            <Option v-for="value in WEIGHTS" :key="value" :label="String(value)" :value="value" />
+          </Select>
+        </FormItem>
+        <Input
+          textarea
+          :rows="3"
+          label="自定义 CSS 链接（每行一个）"
+          description="相对字体地址会按 CSS 文件地址重写。"
+          :model-value="cssText"
+          placeholder="https://example.com/fonts.css"
+          @update:model-value="updateCssUrls(String($event))"
+        />
       </div>
     </SectionCard>
 
     <SectionCard title="选择器过滤">
-      <div class="mb-3 inline-flex rounded-md border border-border p-0.5">
-        <button
+      <SegmentedButtons :value="rule.selectors.mode" @update:value="setMode">
+        <SegmentedButton
           v-for="mode in MODES"
           :key="mode.value"
-          type="button"
-          class="rounded px-2 py-1 text-xs"
-          :class="rule.selectors.mode === mode.value ? 'bg-accent text-white' : 'text-muted'"
-          :aria-pressed="rule.selectors.mode === mode.value"
-          @click="setMode(mode.value)"
-        >
-          {{ mode.label }}
-        </button>
-      </div>
+          :label="mode.label"
+          :value="mode.value"
+        />
+      </SegmentedButtons>
 
-      <div v-if="rule.selectors.mode !== 'none'" class="mb-3">
-        <span class="label">预设（可选）</span>
+      <div v-if="rule.selectors.mode !== 'none'" class="mt-3">
+        <p class="mb-1 text-xs font-medium text-ds-muted">预设（可选）</p>
         <div class="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            class="rounded border px-2 py-1 text-xs"
-            :class="presetId === null ? 'border-accent text-fg' : 'border-border text-muted'"
-            :aria-pressed="presetId === null"
-            @click="setPreset(null)"
-          >
-            不使用预设
-          </button>
-          <button
+          <Chip
+            label="不使用预设"
+            :selected="presetId === null"
+            @update:selected="setPreset(null)"
+          />
+          <Chip
             v-for="preset in SELECTOR_PRESETS"
             :key="preset.id"
-            type="button"
-            class="rounded border px-2 py-1 text-xs"
-            :class="presetId === preset.id ? 'border-accent text-fg' : 'border-border text-muted'"
-            :aria-pressed="presetId === preset.id"
+            :label="preset.label"
+            :selected="presetId === preset.id"
             :title="preset.description"
-            @click="setPreset(preset.id)"
-          >
-            {{ preset.label }}
-          </button>
+            @update:selected="(selected) => setPreset(selected ? preset.id : null)"
+          />
         </div>
         <template v-if="presetText !== ''">
-          <label class="label mt-2" for="rule-preset"
-            >预设选择器（只读，{{ presetText.split("\n").length }} 条）</label
-          >
-          <textarea
-            id="rule-preset"
-            class="input font-mono"
-            rows="4"
+          <Input
+            textarea
+            :rows="4"
             readonly
-            :value="presetText"
+            class="mt-2"
+            :label="`预设选择器（只读，${presetText.split('\n').length} 条）`"
+            description="预设会与下面的自定义选择器合并后一起生效。"
+            :model-value="presetText"
           />
-          <p class="hint">预设会与下面的自定义选择器合并后一起生效。</p>
         </template>
       </div>
 
-      <label class="label" for="rule-selectors">自定义选择器（每行一个）</label>
-      <textarea
-        id="rule-selectors"
-        class="input font-mono"
-        rows="4"
-        :value="selectorText"
-        :disabled="rule.selectors.mode === 'none'"
-        placeholder="article .content"
-        @input="updateSelectorList(($event.target as HTMLTextAreaElement).value)"
-      />
-      <p class="hint">
-        黑名单：排除匹配元素及其子树；白名单：只作用于匹配元素及其子树。选择器只在元素所在 DOM
-        树内匹配（Shadow DOM 不跨边界）。
-      </p>
+      <div class="mt-3">
+        <Input
+          textarea
+          :rows="4"
+          label="自定义选择器（每行一个）"
+          description="黑名单：排除匹配元素及其子树；白名单：只作用于匹配元素及其子树。选择器只在元素所在 DOM 树内匹配（Shadow DOM 不跨边界）。"
+          :disabled="rule.selectors.mode === 'none'"
+          :model-value="selectorText"
+          placeholder="article .content"
+          @update:model-value="updateSelectorList(String($event))"
+        />
+      </div>
     </SectionCard>
 
     <div class="flex items-center justify-end gap-2">
@@ -268,30 +255,32 @@ const usageText = computed(() =>
         @confirm="emit('delete')"
       >
         <template #trigger>
-          <button type="button" class="btn btn-danger">删除</button>
+          <Button variant="text" size="sm" class="text-ds-error!">删除</Button>
         </template>
       </ConfirmDialog>
-      <button
+      <Button
         v-else
-        type="button"
-        class="btn btn-danger"
+        variant="text"
+        size="sm"
+        class="text-ds-error!"
         disabled
         title="内置规则不可删除；字体栈可以改，缺失时会自动重新生成"
       >
         删除
-      </button>
-      <button
+      </Button>
+      <Button
         v-if="builtin"
-        type="button"
-        class="btn mr-auto"
+        variant="text"
+        size="sm"
+        class="mr-auto"
         :disabled="!canReset"
         title="恢复内置的字体栈与选择器过滤（保存后生效）"
         @click="resetToBuiltin"
       >
         重置为默认
-      </button>
-      <button type="button" class="btn" @click="emit('cancel')">取消</button>
-      <button type="button" class="btn btn-primary" @click="emit('save')">保存</button>
+      </Button>
+      <Button variant="text" size="sm" @click="emit('cancel')">取消</Button>
+      <Button size="sm" @click="emit('save')">保存</Button>
     </div>
   </div>
 </template>

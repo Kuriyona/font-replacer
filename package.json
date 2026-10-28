@@ -12,11 +12,12 @@
     "icons": "node scripts/render-icons.mjs"
   },
   "dependencies": {
-    "@lucide/vue": "^1.62.0",
+    "@iconify-icons/material-symbols": "^2.0.7",
+    "@iconify/vue": "^5.0.4",
+    "@sharpdotnut/dotsharp": "^1.0.0",
     "es-toolkit": "^1.53.0",
     "postcss": "^8.5.32",
     "postcss-value-parser": "^4.2.0",
-    "reka-ui": "^2.11.0",
     "tldts": "^7.4.19",
     "vue": "^3.5.44"
   },

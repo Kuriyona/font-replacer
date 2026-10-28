@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { Plus, RefreshCw } from "@lucide/vue";
+import {
+  Button,
+  Icon,
+  Input,
+  Option,
+  Select,
+  Tab,
+  Tabs,
+  showSnackbar,
+} from "@sharpdotnut/dotsharp";
+import addIcon from "@iconify-icons/material-symbols/add";
+import deleteIcon from "@iconify-icons/material-symbols/delete";
+import refreshIcon from "@iconify-icons/material-symbols/refresh";
 import { probeLocalFont } from "@/content/issues";
 import { clearProbeCache, ensureFontCache, refreshFontCache } from "@/shared/fonts";
 import { normalizeHostname, validateSiteDraft } from "@/shared/sites";
@@ -20,6 +32,7 @@ import {
 import { isBuiltinRuleId } from "@/shared/builtin-rules";
 import { selectorCount, validateRuleDraft } from "@/shared/rules";
 import type { FontCache, Rule, SiteRule } from "@/shared/types";
+import IconAction from "@/ui/components/IconAction.vue";
 import RuleEditor from "@/ui/components/RuleEditor.vue";
 import SiteEditor from "@/ui/components/SiteEditor.vue";
 import SectionCard from "@/ui/components/SectionCard.vue";
@@ -32,7 +45,6 @@ const sites = ref<SiteRule[]>([]);
 const fontCache = ref<FontCache | null>(null);
 const tab = ref<Tab>("rules");
 const error = ref("");
-const notice = ref("");
 const loading = ref(true);
 
 const ruleDraft = ref<Rule | null>(null);
@@ -48,6 +60,17 @@ let unsubscribeConfig: (() => void) | null = null;
 let unsubscribeCache: (() => void) | null = null;
 
 const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+
+const notify = (text: string): void => {
+  showSnackbar({ text, dismissible: true });
+};
+
+const tabValue = computed({
+  get: () => tab.value,
+  set: (value: string | number) => {
+    tab.value = value as Tab;
+  },
+});
 
 /**
  * 规则/站点是纯 JSON 数据（字符串/数字/布尔/数组）。
@@ -169,7 +192,7 @@ async function saveRuleDraft(): Promise<void> {
     ruleDraft.value = clonePlain(next);
     ruleDraftIsNew.value = false;
     error.value = "";
-    notice.value = "规则已保存";
+    notify("规则已保存");
     setHash(`rule=${encodeURIComponent(next.id)}`);
   } catch (err) {
     error.value = messageOf(err);
@@ -178,7 +201,7 @@ async function saveRuleDraft(): Promise<void> {
 
 function onRuleReset(): void {
   error.value = "";
-  notice.value = "已恢复内置默认值，保存后生效";
+  notify("已恢复内置默认值，保存后生效");
 }
 
 async function removeRule(): Promise<void> {
@@ -188,7 +211,7 @@ async function removeRule(): Promise<void> {
     await deleteRule(draft.id);
     await loadAll();
     closeRule();
-    notice.value = "规则已删除";
+    notify("规则已删除");
   } catch (err) {
     error.value = messageOf(err);
   }
@@ -215,7 +238,7 @@ async function saveSiteDraft(): Promise<void> {
     siteDraft.value = clonePlain(next);
     siteDraftPrevious.value = clonePlain(next);
     error.value = "";
-    notice.value = "站点已保存";
+    notify("站点已保存");
     setHash(`site=${encodeURIComponent(siteKey(next))}`);
   } catch (err) {
     error.value = messageOf(err);
@@ -229,7 +252,7 @@ async function removeSite(): Promise<void> {
     await deleteSite(draft);
     await loadAll();
     closeSite();
-    notice.value = "站点已删除";
+    notify("站点已删除");
   } catch (err) {
     error.value = messageOf(err);
   }
@@ -270,23 +293,26 @@ async function removeSiteFromList(site: SiteRule): Promise<void> {
     await deleteSite(site);
     await loadAll();
     if (siteDraft.value && siteKey(siteDraft.value) === siteKey(site)) closeSite();
-    notice.value = "站点已删除";
+    notify("站点已删除");
   } catch (err) {
     error.value = messageOf(err);
   }
 }
 
+const setNewSiteMatch = (value: string | number): void => {
+  newSiteMatch.value = value === "domain" ? "domain" : "host";
+};
+
 async function refreshFonts(): Promise<void> {
   error.value = "";
-  notice.value = "";
   try {
     const hasRichApi = "queryLocalFonts" in window;
     const cache = await refreshFontCache("rich");
     fontCache.value = cache;
     if (cache.source === "font-settings" && hasRichApi) {
-      notice.value = "未获得本地字体详细访问权限，已使用基础字体列表";
+      notify("未获得本地字体详细访问权限，已使用基础字体列表");
     } else {
-      notice.value = `已读取 ${cache.families.length} 个字体`;
+      notify(`已读取 ${cache.families.length} 个字体`);
     }
     await recheckMissing();
   } catch (err) {
@@ -352,71 +378,60 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1100px] p-6">
-    <header class="mb-4 flex items-center justify-between gap-4">
+  <div class="mx-auto max-w-[1100px] p-6 text-sm">
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-lg font-semibold">Font Refine</h1>
-        <p class="text-xs text-muted">
+        <h1 class="text-lg font-medium">Font Refine</h1>
+        <p class="text-xs text-ds-muted">
           按站点替换网页字体：读取本机字体、规则排序、自定义 CSS 与选择器过滤。
         </p>
       </div>
-      <nav class="inline-flex rounded-md border border-border bg-surface p-0.5 text-sm">
-        <button
-          v-for="item in [
-            { value: 'rules', label: '规则' },
-            { value: 'sites', label: '站点' },
-            { value: 'fonts', label: '字体' },
-          ] as const"
-          :key="item.value"
-          type="button"
-          class="rounded px-3 py-1"
-          :class="tab === item.value ? 'bg-accent text-white' : 'text-muted'"
-          @click="tab = item.value"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
+      <Tabs v-model:value="tabValue">
+        <Tab label="规则" value="rules" />
+        <Tab label="站点" value="sites" />
+        <Tab label="字体" value="fonts" />
+      </Tabs>
     </header>
 
     <p
       v-if="error"
-      class="mb-3 rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
+      class="mb-3 rounded-ds-sm border border-ds-error bg-ds-error/8 px-3 py-2 text-sm text-ds-error!"
     >
       {{ error }}
     </p>
-    <p
-      v-if="notice"
-      class="mb-3 rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted"
-    >
-      {{ notice }}
-    </p>
 
-    <p v-if="loading" class="text-sm text-muted">加载中…</p>
+    <p v-if="loading" class="text-sm text-ds-muted">加载中…</p>
 
     <div v-else-if="tab === 'rules'" class="grid gap-4 lg:grid-cols-[18rem_1fr]">
       <SectionCard title="规则列表">
         <template #actions>
-          <button type="button" class="btn" @click="startNewRule">
-            <Plus class="size-3.5" aria-hidden="true" />
+          <Button variant="tonal" size="sm" @click="startNewRule">
+            <Icon :icon="addIcon" />
             新建规则
-          </button>
+          </Button>
         </template>
         <ul class="space-y-1">
           <li v-for="rule in sortedRules" :key="rule.id">
             <button
               type="button"
-              class="w-full rounded-md border border-transparent px-2 py-1.5 text-left hover:bg-accent-soft"
-              :class="{ 'border-border bg-accent-soft': ruleDraft?.id === rule.id }"
+              class="w-full rounded-ds-sm border px-2 py-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ds-focus"
+              :class="
+                ruleDraft?.id === rule.id
+                  ? 'border-ds-primary-strong bg-ds-tonal'
+                  : 'border-transparent hover:bg-ds-surface-hover'
+              "
               @click="openRule(rule.id)"
             >
               <span class="flex items-center gap-1.5">
                 <span class="truncate text-sm">{{ rule.name }}</span>
                 <span
                   v-if="isBuiltinRuleId(rule.id)"
-                  class="shrink-0 rounded bg-bg px-1 text-[10px] text-muted"
+                  class="shrink-0 rounded-ds-sm bg-ds-surface-hover px-1 text-[10px] text-ds-muted"
                   >内置</span
                 >
-                <span v-if="!rule.enabled" class="rounded bg-bg px-1 text-[10px] text-muted"
+                <span
+                  v-if="!rule.enabled"
+                  class="shrink-0 rounded-ds-sm bg-ds-surface-hover px-1 text-[10px] text-ds-muted"
                   >停用</span
                 >
                 <WarningIcon
@@ -424,7 +439,7 @@ onUnmounted(() => {
                   :message="`${missingByRule.get(rule.id)?.length} 个字体未安装`"
                 />
               </span>
-              <span class="mt-0.5 block truncate text-xs text-muted">
+              <span class="mt-0.5 block truncate text-xs text-ds-muted">
                 {{ rule.fonts.length }} 字体 ·
                 {{
                   rule.selectors.mode === "none"
@@ -435,7 +450,7 @@ onUnmounted(() => {
             </button>
           </li>
         </ul>
-        <p v-if="sortedRules.length === 0" class="text-xs text-muted">还没有规则。</p>
+        <p v-if="sortedRules.length === 0" class="text-xs text-ds-muted">还没有规则。</p>
       </SectionCard>
 
       <div>
@@ -453,8 +468,10 @@ onUnmounted(() => {
           @reset="onRuleReset"
         />
         <SectionCard v-else>
-          <p class="text-sm text-muted">从左侧选择一条规则，或新建规则。</p>
-          <p v-if="ruleDraftIsNew" class="hint">新规则在点击保存后才会写入存储。</p>
+          <p class="text-sm text-ds-muted">从左侧选择一条规则，或新建规则。</p>
+          <p v-if="ruleDraftIsNew" class="mt-1 text-xs text-ds-muted">
+            新规则在点击保存后才会写入存储。
+          </p>
         </SectionCard>
       </div>
     </div>
@@ -463,10 +480,10 @@ onUnmounted(() => {
       <SectionCard title="站点列表">
         <ul class="space-y-1">
           <li v-for="site in sortedSites" :key="siteKey(site)">
-            <div class="flex items-start gap-1 rounded-md px-1 py-1 hover:bg-accent-soft">
+            <div class="flex items-start gap-1 rounded-ds-sm px-1 py-1 hover:bg-ds-surface-hover">
               <button
                 type="button"
-                class="min-w-0 flex-1 text-left"
+                class="min-w-0 flex-1 rounded-ds-sm text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ds-focus"
                 @click="openSite(siteKey(site))"
               >
                 <span class="flex items-center gap-1.5">
@@ -476,40 +493,38 @@ onUnmounted(() => {
                     :message="`${siteMissing(site).length} 个字体未安装`"
                   />
                 </span>
-                <span class="mt-0.5 block truncate text-xs text-muted">
+                <span class="mt-0.5 block truncate text-xs text-ds-muted">
                   {{ site.match === "host" ? "主机" : "域名及子域" }} ·
                   {{ site.ruleIds.length }} 条规则
                 </span>
               </button>
-              <button
-                type="button"
-                class="btn btn-icon btn-danger"
-                aria-label="删除站点"
+              <IconAction
+                :icon="deleteIcon"
+                label="删除站点"
+                tone="danger"
                 @click="removeSiteFromList(site)"
-              >
-                ✕
-              </button>
+              />
             </div>
           </li>
         </ul>
-        <p v-if="sortedSites.length === 0" class="text-xs text-muted">还没有站点配置。</p>
+        <p v-if="sortedSites.length === 0" class="text-xs text-ds-muted">还没有站点配置。</p>
       </SectionCard>
 
       <div class="space-y-4">
         <SectionCard title="添加站点">
-          <div class="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-            <input
+          <div class="grid items-end gap-3 sm:grid-cols-[1fr_10rem_auto]">
+            <Input
               v-model="newSitePattern"
-              class="input"
+              label="主机名或域名"
               placeholder="example.com 或 https://example.com/a"
             />
-            <select v-model="newSiteMatch" class="input">
-              <option value="host">主机（精确）</option>
-              <option value="domain">域名及子域</option>
-            </select>
-            <button type="button" class="btn btn-primary" @click="createSite">添加</button>
+            <Select label="匹配方式" :value="newSiteMatch" @update:value="setNewSiteMatch">
+              <Option label="主机（精确）" value="host" />
+              <Option label="域名及子域" value="domain" />
+            </Select>
+            <Button size="sm" @click="createSite">添加</Button>
           </div>
-          <p class="hint">“域名及子域”需要可注册域名（如 example.com）。</p>
+          <p class="mt-2 text-xs text-ds-muted">“域名及子域”需要可注册域名（如 example.com）。</p>
         </SectionCard>
 
         <SiteEditor
@@ -523,7 +538,7 @@ onUnmounted(() => {
           @delete="removeSite"
         />
         <SectionCard v-else>
-          <p class="text-sm text-muted">从左侧选择一个站点，或在上方添加站点。</p>
+          <p class="text-sm text-ds-muted">从左侧选择一个站点，或在上方添加站点。</p>
         </SectionCard>
       </div>
     </div>
@@ -531,14 +546,14 @@ onUnmounted(() => {
     <div v-else class="space-y-4">
       <SectionCard title="本机字体">
         <div class="flex flex-wrap items-center gap-3">
-          <button type="button" class="btn btn-primary" @click="refreshFonts">
-            <RefreshCw class="size-3.5" aria-hidden="true" />
+          <Button variant="tonal" size="sm" @click="refreshFonts">
+            <Icon :icon="refreshIcon" />
             读取系统字体
-          </button>
-          <span class="text-sm text-muted">
+          </Button>
+          <span class="text-sm text-ds-muted">
             {{ fontCache ? `${fontCache.families.length} 个字体` : "尚无字体列表" }}
           </span>
-          <span v-if="fontCache" class="text-sm text-muted">
+          <span v-if="fontCache" class="text-sm text-ds-muted">
             来源：{{ fontCache.source === "local-fonts" ? "本地字体详细列表" : "系统字体基础列表" }}
             ·
             {{ formatTime(fontCache.updatedAt) }}
@@ -548,7 +563,7 @@ onUnmounted(() => {
           <li
             v-for="font in fontCache?.families ?? []"
             :key="font.family"
-            class="truncate rounded border border-border px-2 py-1"
+            class="truncate rounded-ds-sm border border-ds-line px-2 py-1"
             :style="{ fontFamily: `'${font.family}'` }"
             :title="font.family"
           >
@@ -557,7 +572,7 @@ onUnmounted(() => {
         </ul>
       </SectionCard>
       <SectionCard title="说明">
-        <ul class="list-disc space-y-1 pl-5 text-sm text-muted">
+        <ul class="list-disc space-y-1 pl-5 text-sm text-ds-muted">
           <li>字体列表只保存在本机（chrome.storage.local），不会同步或上传。</li>
           <li>读取详细列表可能弹出浏览器权限请求；拒绝后回落到基础字体列表。</li>
           <li>规则里的“本机”字体会用本地字体探测检查是否仍然存在，缺失时显示警告。</li>

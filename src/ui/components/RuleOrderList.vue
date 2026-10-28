@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, Trash2 } from "@lucide/vue";
+import arrowDownIcon from "@iconify-icons/material-symbols/arrow-downward";
+import arrowUpIcon from "@iconify-icons/material-symbols/arrow-upward";
+import deleteIcon from "@iconify-icons/material-symbols/delete";
 import type { Rule } from "@/shared/types";
+import IconAction from "./IconAction.vue";
 import WarningIcon from "./WarningIcon.vue";
 
 const props = withDefaults(
@@ -33,15 +36,15 @@ const summary = (rule: Rule): string => {
     <li
       v-for="(rule, index) in rules"
       :key="rule.id"
-      class="flex items-center gap-2 rounded-md border border-border px-2 py-1.5"
+      class="flex items-center gap-2 rounded-ds-sm border border-ds-line bg-ds-surface px-2 py-1"
     >
-      <span class="w-4 text-center text-xs text-muted">{{ index + 1 }}</span>
+      <span class="w-4 text-center text-xs text-ds-muted">{{ index + 1 }}</span>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5">
           <span class="truncate text-sm">{{ rule.name }}</span>
           <span
             v-if="!rule.enabled"
-            class="shrink-0 rounded bg-accent-soft px-1 text-[10px] text-muted"
+            class="shrink-0 rounded-ds-sm bg-ds-surface-hover px-1.5 text-[10px] text-ds-muted"
           >
             已停用
           </span>
@@ -50,35 +53,27 @@ const summary = (rule: Rule): string => {
             :message="`${missingCount(rule)} 个字体在本机未找到`"
           />
         </div>
-        <p class="truncate text-xs text-muted">{{ summary(rule) }}</p>
+        <p class="truncate text-xs text-ds-muted">{{ summary(rule) }}</p>
       </div>
-      <button
-        type="button"
-        class="btn btn-icon"
-        aria-label="上移规则"
+      <IconAction
+        :icon="arrowUpIcon"
+        label="上移规则"
         :disabled="index === 0"
         @click="emit('move', index, -1)"
-      >
-        <ArrowUp class="size-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        class="btn btn-icon"
-        aria-label="下移规则"
+      />
+      <IconAction
+        :icon="arrowDownIcon"
+        label="下移规则"
         :disabled="index === rules.length - 1"
         @click="emit('move', index, 1)"
-      >
-        <ArrowDown class="size-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        class="btn btn-icon btn-danger"
-        aria-label="移除规则"
+      />
+      <IconAction
+        :icon="deleteIcon"
+        label="移除规则"
+        tone="danger"
         @click="emit('remove', index)"
-      >
-        <Trash2 class="size-3.5" aria-hidden="true" />
-      </button>
+      />
     </li>
   </ol>
-  <p v-else class="text-xs text-muted">{{ emptyText }}</p>
+  <p v-else class="text-xs text-ds-muted">{{ emptyText }}</p>
 </template>

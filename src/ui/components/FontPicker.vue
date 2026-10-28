@@ -1,14 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import {
-  ComboboxAnchor,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxRoot,
-  ComboboxViewport,
-} from "reka-ui";
+import { computed, ref, watch } from "vue";
+import { Button, Dialog, Input } from "@sharpdotnut/dotsharp";
 import type { FontCache, RuleFont } from "@/shared/types";
 
 const props = defineProps<{ cache: FontCache | null }>();
@@ -16,8 +8,13 @@ const emit = defineEmits<{ select: [font: RuleFont]; cancel: [] }>();
 
 const MAX_RENDER = 200;
 const MAX_SUMMARY_STYLES = 3;
-const open = ref(true);
+
+const open = defineModel<boolean>("open", { required: true });
 const search = ref("");
+
+watch(open, (value) => {
+  if (value) search.value = "";
+});
 
 const summarizeStyles = (styles: string[]): string => {
   if (styles.length <= MAX_SUMMARY_STYLES) return styles.join(" / ");
@@ -46,76 +43,66 @@ const exactFamily = computed(() => {
   return hit?.family ?? null;
 });
 
-const pick = (value: unknown): void => {
-  if (typeof value !== "string" || value === "") return;
-  emit("select", { family: value, source: "system" });
+const pick = (family: string): void => {
+  if (family === "") return;
+  open.value = false;
+  emit("select", { family, source: "system" });
 };
 
 const pickCustom = (): void => {
   const family = exactFamily.value ?? customName.value;
   if (family === "") return;
+  open.value = false;
   emit("select", { family, source: exactFamily.value ? "system" : "custom" });
 };
+
+const cancel = (): void => {
+  open.value = false;
+  emit("cancel");
+};
+
+const actionLabel = computed(() => {
+  if (exactFamily.value) return `添加 ${exactFamily.value}`;
+  if (customName.value) return `使用自定义：${customName.value}`;
+  return "选择字体";
+});
 </script>
 
 <template>
-  <div class="rounded-md border border-border bg-surface p-2">
-    <ComboboxRoot
-      v-model:open="open"
-      :ignore-filter="true"
-      :reset-search-term-on-select="false"
-      @update:model-value="pick"
-    >
-      <ComboboxAnchor>
-        <ComboboxInput
-          v-model="search"
-          class="input"
-          placeholder="搜索字体，或直接输入字体名"
-          autofocus
-        />
-      </ComboboxAnchor>
-      <ComboboxContent
-        class="z-10 max-h-64 overflow-auto rounded-md border border-border bg-surface"
-      >
-        <ComboboxViewport>
-          <ComboboxItem
-            v-for="item in visible"
-            :key="item.family"
-            :value="item.family"
-            class="flex cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-sm data-[highlighted]:bg-accent-soft"
+  <Dialog v-model:open="open" title="选择字体">
+    <Input v-model="search" placeholder="搜索字体，或直接输入字体名" clearable autofocus />
+    <ul class="mt-3 max-h-72 overflow-auto rounded-ds-sm border border-ds-line">
+      <li v-for="item in visible" :key="item.family">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-ds-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ds-focus"
+          @click="pick(item.family)"
+        >
+          <span class="min-w-0 truncate text-ds-fg" :style="{ fontFamily: `'${item.family}'` }">
+            {{ item.family }}
+          </span>
+          <span
+            v-if="item.styles.length"
+            class="max-w-[60%] shrink-0 truncate text-right text-xs text-ds-muted"
+            :title="item.styles.join(' / ')"
           >
-            <span class="min-w-0 truncate" :style="{ fontFamily: `'${item.family}'` }">
-              {{ item.family }}
-            </span>
-            <span
-              v-if="item.styles.length"
-              class="max-w-[60%] shrink-0 truncate text-right text-xs text-muted"
-              :title="item.styles.join(' / ')"
-            >
-              {{ summarizeStyles(item.styles) }}
-            </span>
-          </ComboboxItem>
-        </ComboboxViewport>
-        <ComboboxEmpty class="px-2 py-1.5 text-xs text-muted"> 没有匹配的本机字体 </ComboboxEmpty>
-      </ComboboxContent>
-    </ComboboxRoot>
-
-    <p v-if="truncated" class="hint">
+            {{ summarizeStyles(item.styles) }}
+          </span>
+        </button>
+      </li>
+    </ul>
+    <p v-if="visible.length === 0" class="text-xs text-ds-muted">没有匹配的本机字体</p>
+    <p v-if="truncated" class="mt-2 text-xs text-ds-muted">
       结果较多，只显示前 {{ MAX_RENDER }} 项，请继续输入以缩小范围。
     </p>
 
-    <div class="mt-2 flex items-center justify-between gap-2">
-      <button
-        type="button"
-        class="btn"
-        :disabled="customName === '' && exactFamily === null"
-        @click="pickCustom"
-      >
-        <template v-if="exactFamily">添加 {{ exactFamily }}</template>
-        <template v-else-if="customName">使用自定义字体名：{{ customName }}</template>
-        <template v-else>请选择或输入字体</template>
-      </button>
-      <button type="button" class="btn" @click="emit('cancel')">取消</button>
-    </div>
-  </div>
+    <template #footer-left>
+      <Button variant="text" size="sm" @click="cancel">取消</Button>
+    </template>
+    <template #footer-right>
+      <Button size="sm" :disabled="customName === ''" @click="pickCustom">
+        {{ actionLabel }}
+      </Button>
+    </template>
+  </Dialog>
 </template>
