@@ -1,3 +1,4 @@
+import { isSelectorPresetId, presetSelectors } from "./selector-presets";
 import type { Rule, RuleFont, SelectorMode, SiteRule } from "./types";
 
 const FONT_WEIGHTS = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900]);
@@ -58,6 +59,7 @@ export function normalizeRule(raw: unknown): Rule | null {
   const rawSelectors = isObject(raw.selectors) ? raw.selectors : {};
   const rawMode = rawSelectors.mode;
   const mode: SelectorMode = rawMode === "blacklist" || rawMode === "whitelist" ? rawMode : "none";
+  const preset = isSelectorPresetId(rawSelectors.preset) ? rawSelectors.preset : undefined;
   const list: string[] = [];
   if (Array.isArray(rawSelectors.list)) {
     for (const item of rawSelectors.list) {
@@ -65,6 +67,8 @@ export function normalizeRule(raw: unknown): Rule | null {
       list.push(item.trim());
     }
   }
+  const uniqueList = [...new Set(list)];
+  const hasFilter = uniqueList.length > 0 || preset !== undefined;
 
   return {
     id: raw.id.trim(),
@@ -73,7 +77,11 @@ export function normalizeRule(raw: unknown): Rule | null {
     fonts,
     fontWeight,
     cssUrls: [...new Set(cssUrls)],
-    selectors: { mode: list.length === 0 ? "none" : mode, list: [...new Set(list)] },
+    selectors: {
+      mode: hasFilter ? mode : "none",
+      list: uniqueList,
+      ...(preset ? { preset } : {}),
+    },
     createdAt: timestamp(raw.createdAt),
     updatedAt: timestamp(raw.updatedAt),
   };
@@ -128,8 +136,7 @@ export function validateRuleDraft(rule: Rule, deps: RuleDraftDeps = {}): string[
   }
 
   if (rule.selectors.mode !== "none") {
-    if (rule.selectors.list.length === 0)
-      errors.push("选择器模式不为“不限制”时必须填写至少一条选择器");
+    if (selectorCount(rule) === 0) errors.push("选择器模式不为“不限制”时必须填写至少一条选择器");
     for (const selector of rule.selectors.list) {
       if (!validateSelector(selector)) errors.push(`选择器无效：${selector}`);
     }
@@ -166,11 +173,18 @@ export function buildFontStack(rule: Rule, originalChain: string): string {
 
 export type CompiledFilter = { mode: "none" } | { mode: "blacklist" | "whitelist"; text: string };
 
-/** 选择器列表编译为一条逗号分隔的选择器 */
+/** 选择器列表编译为一条逗号分隔的选择器；预设选择器排在自定义选择器之前 */
 export function compileFilter(rule: Rule): CompiledFilter {
-  const { mode, list } = rule.selectors;
-  if (mode === "none" || list.length === 0) return { mode: "none" };
-  return { mode, text: list.join(",") };
+  const { mode, list, preset } = rule.selectors;
+  if (mode === "none") return { mode: "none" };
+  const selectors = [...presetSelectors(preset), ...list];
+  if (selectors.length === 0) return { mode: "none" };
+  return { mode, text: selectors.join(",") };
+}
+
+/** 预设 + 自定义选择器的总条数 */
+export function selectorCount(rule: Rule): number {
+  return presetSelectors(rule.selectors.preset).length + rule.selectors.list.length;
 }
 
 export type PickedRule = { rule: Rule; filterText?: string };

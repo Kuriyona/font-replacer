@@ -16,7 +16,7 @@ import {
   subscribeConfig,
   subscribeFontCache,
 } from "@/shared/storage";
-import { validateRuleDraft } from "@/shared/rules";
+import { selectorCount, validateRuleDraft } from "@/shared/rules";
 import type { FontCache, Rule, SiteRule } from "@/shared/types";
 import RuleEditor from "@/ui/components/RuleEditor.vue";
 import SiteEditor from "@/ui/components/SiteEditor.vue";
@@ -416,7 +416,7 @@ onUnmounted(() => {
                 {{
                   rule.selectors.mode === "none"
                     ? "不限制"
-                    : `${rule.selectors.mode === "blacklist" ? "黑名单" : "白名单"} ${rule.selectors.list.length}`
+                    : `${rule.selectors.mode === "blacklist" ? "黑名单" : "白名单"} ${selectorCount(rule)}`
                 }}
               </span>
             </button>

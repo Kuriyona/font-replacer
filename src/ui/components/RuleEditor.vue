@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { FontCache, Rule, SelectorMode } from "@/shared/types";
+import { SELECTOR_PRESETS, presetSelectors } from "@/shared/selector-presets";
+import type { FontCache, Rule, SelectorMode, SelectorPresetId } from "@/shared/types";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import FontStackEditor from "./FontStackEditor.vue";
 import SectionCard from "./SectionCard.vue";
@@ -17,9 +18,9 @@ const emit = defineEmits<{ save: []; cancel: []; delete: [] }>();
 
 const WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 const MODES: Array<{ value: SelectorMode; label: string }> = [
-  { value: "none", label: "不限制" },
-  { value: "blacklist", label: "黑名单" },
+  { value: "blacklist", label: "黑名单（推荐）" },
   { value: "whitelist", label: "白名单" },
+  { value: "none", label: "不限制" },
 ];
 
 const cssText = ref(rule.value.cssUrls.join("\n"));
@@ -75,6 +76,17 @@ const updateSelectorList = (text: string): void => {
 const setMode = (mode: SelectorMode): void => {
   rule.value = { ...rule.value, selectors: { ...rule.value.selectors, mode } };
 };
+
+/** 挂上 / 摘掉预设；预设选择器与自定义选择器合并生效 */
+const setPreset = (id: SelectorPresetId | null): void => {
+  const selectors = { ...rule.value.selectors };
+  if (id) selectors.preset = id;
+  else delete selectors.preset;
+  rule.value = { ...rule.value, selectors };
+};
+
+const presetId = computed<SelectorPresetId | null>(() => rule.value.selectors.preset ?? null);
+const presetText = computed(() => presetSelectors(presetId.value ?? undefined).join("\n"));
 
 const updateFonts = (fonts: Rule["fonts"]): void => {
   rule.value = { ...rule.value, fonts };
@@ -146,7 +158,7 @@ const usageText = computed(() =>
     </SectionCard>
 
     <SectionCard title="选择器过滤">
-      <div class="mb-2 inline-flex rounded-md border border-border p-0.5">
+      <div class="mb-3 inline-flex rounded-md border border-border p-0.5">
         <button
           v-for="mode in MODES"
           :key="mode.value"
@@ -159,7 +171,48 @@ const usageText = computed(() =>
           {{ mode.label }}
         </button>
       </div>
-      <label class="label" for="rule-selectors">选择器（每行一个）</label>
+
+      <div v-if="rule.selectors.mode !== 'none'" class="mb-3">
+        <span class="label">预设（可选）</span>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            class="rounded border px-2 py-1 text-xs"
+            :class="presetId === null ? 'border-accent text-fg' : 'border-border text-muted'"
+            :aria-pressed="presetId === null"
+            @click="setPreset(null)"
+          >
+            不使用预设
+          </button>
+          <button
+            v-for="preset in SELECTOR_PRESETS"
+            :key="preset.id"
+            type="button"
+            class="rounded border px-2 py-1 text-xs"
+            :class="presetId === preset.id ? 'border-accent text-fg' : 'border-border text-muted'"
+            :aria-pressed="presetId === preset.id"
+            :title="preset.description"
+            @click="setPreset(preset.id)"
+          >
+            {{ preset.label }}
+          </button>
+        </div>
+        <template v-if="presetText !== ''">
+          <label class="label mt-2" for="rule-preset"
+            >预设选择器（只读，{{ presetText.split("\n").length }} 条）</label
+          >
+          <textarea
+            id="rule-preset"
+            class="input font-mono"
+            rows="4"
+            readonly
+            :value="presetText"
+          />
+          <p class="hint">预设会与下面的自定义选择器合并后一起生效。</p>
+        </template>
+      </div>
+
+      <label class="label" for="rule-selectors">自定义选择器（每行一个）</label>
       <textarea
         id="rule-selectors"
         class="input font-mono"

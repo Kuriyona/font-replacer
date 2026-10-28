@@ -2,6 +2,9 @@ export type RuleFont = { family: string; source: "system" | "custom" };
 
 export type SelectorMode = "none" | "blacklist" | "whitelist";
 
+/** 内置选择器预设 id；当前规则可额外挂一个预设，与自定义选择器合并生效 */
+export type SelectorPresetId = "regular-blacklist" | "mono-whitelist";
+
 export type Rule = {
   id: string;
   name: string;
@@ -11,7 +14,7 @@ export type Rule = {
   /** 100..900；设置后强制覆盖 */
   fontWeight?: number;
   cssUrls: string[];
-  selectors: { mode: SelectorMode; list: string[] };
+  selectors: { mode: SelectorMode; list: string[]; preset?: SelectorPresetId };
   createdAt: number;
   updatedAt: number;
 };
