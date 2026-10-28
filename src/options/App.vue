@@ -47,6 +47,12 @@ let unsubscribeCache: (() => void) | null = null;
 
 const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+/**
+ * 规则/站点是纯 JSON 数据（字符串/数字/布尔/数组）。
+ * 经 JSON 往返可剥掉响应式 Proxy：structuredClone 与 chrome.storage 都不接受 Proxy。
+ */
+const clonePlain = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
 const sortedRules = computed(() =>
   [...rules.value].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)),
 );
@@ -111,7 +117,7 @@ function makeNewRule(): Rule {
 function openRule(id: string): void {
   const rule = rules.value.find((item) => item.id === id);
   if (!rule) return;
-  ruleDraft.value = structuredClone(rule);
+  ruleDraft.value = clonePlain(rule);
   ruleDraftIsNew.value = false;
   tab.value = "rules";
   setHash(`rule=${encodeURIComponent(id)}`);
@@ -134,8 +140,8 @@ function closeRule(): void {
 function openSite(key: string): void {
   const site = sites.value.find((item) => siteKey(item) === key);
   if (!site) return;
-  siteDraft.value = structuredClone(site);
-  siteDraftPrevious.value = structuredClone(site);
+  siteDraft.value = clonePlain(site);
+  siteDraftPrevious.value = clonePlain(site);
   tab.value = "sites";
   setHash(`site=${encodeURIComponent(key)}`);
 }
@@ -154,11 +160,11 @@ async function saveRuleDraft(): Promise<void> {
     error.value = errors.join("；");
     return;
   }
-  const next: Rule = { ...draft, name: draft.name.trim(), updatedAt: Date.now() };
+  const next = clonePlain<Rule>({ ...draft, name: draft.name.trim(), updatedAt: Date.now() });
   try {
     await saveRule(next);
     await loadAll();
-    ruleDraft.value = structuredClone(next);
+    ruleDraft.value = clonePlain(next);
     ruleDraftIsNew.value = false;
     error.value = "";
     notice.value = "规则已保存";
@@ -195,12 +201,12 @@ async function saveSiteDraft(): Promise<void> {
     error.value = errors.join("；");
     return;
   }
-  const next: SiteRule = { ...draft, pattern, updatedAt: Date.now() };
+  const next = clonePlain<SiteRule>({ ...draft, pattern, updatedAt: Date.now() });
   try {
-    await saveSite(next, previous ?? undefined);
+    await saveSite(next, previous ? clonePlain(previous) : undefined);
     await loadAll();
-    siteDraft.value = structuredClone(next);
-    siteDraftPrevious.value = structuredClone(next);
+    siteDraft.value = clonePlain(next);
+    siteDraftPrevious.value = clonePlain(next);
     error.value = "";
     notice.value = "站点已保存";
     setHash(`site=${encodeURIComponent(siteKey(next))}`);
