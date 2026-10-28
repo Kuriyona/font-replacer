@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { resetBuiltinRule } from "@/shared/builtin-rules";
 import { SELECTOR_PRESETS, presetSelectors } from "@/shared/selector-presets";
 import type { FontCache, Rule, SelectorMode, SelectorPresetId } from "@/shared/types";
 import ConfirmDialog from "./ConfirmDialog.vue";
@@ -13,8 +14,9 @@ const props = defineProps<{
   fontCache: FontCache | null;
   missing: string[];
   usageCount: number;
+  builtin: boolean;
 }>();
-const emit = defineEmits<{ save: []; cancel: []; delete: [] }>();
+const emit = defineEmits<{ save: []; cancel: []; delete: []; reset: [] }>();
 
 const WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 const MODES: Array<{ value: SelectorMode; label: string }> = [
@@ -91,6 +93,35 @@ const presetText = computed(() => presetSelectors(presetId.value ?? undefined).j
 const updateFonts = (fonts: Rule["fonts"]): void => {
   rule.value = { ...rule.value, fonts };
 };
+
+/** 恢复内置默认值（仅改草稿，保存后生效） */
+const resetToBuiltin = (): void => {
+  const seed = resetBuiltinRule(rule.value);
+  if (!seed) return;
+  rule.value = seed;
+  cssText.value = seed.cssUrls.join("\n");
+  selectorText.value = seed.selectors.list.join("\n");
+  emit("reset");
+};
+
+/** 与出厂值逐项比对（不比较时间戳，也不依赖对象键顺序） */
+const snapshotRule = (value: Rule): string =>
+  JSON.stringify([
+    value.name,
+    value.enabled,
+    value.fonts.map((font) => [font.family, font.source]),
+    value.fontWeight ?? null,
+    value.cssUrls,
+    value.selectors.mode,
+    value.selectors.list,
+    value.selectors.preset ?? null,
+  ]);
+
+const canReset = computed(() => {
+  if (!props.builtin) return false;
+  const seed = resetBuiltinRule(rule.value);
+  return seed !== null && snapshotRule(rule.value) !== snapshotRule(seed);
+});
 
 const usageText = computed(() =>
   props.usageCount > 0
@@ -230,6 +261,7 @@ const usageText = computed(() =>
 
     <div class="flex items-center justify-end gap-2">
       <ConfirmDialog
+        v-if="!builtin"
         title="删除规则"
         :description="usageText"
         confirm-label="删除规则"
@@ -239,6 +271,25 @@ const usageText = computed(() =>
           <button type="button" class="btn btn-danger">删除</button>
         </template>
       </ConfirmDialog>
+      <button
+        v-else
+        type="button"
+        class="btn btn-danger"
+        disabled
+        title="内置规则不可删除；字体栈可以改，缺失时会自动重新生成"
+      >
+        删除
+      </button>
+      <button
+        v-if="builtin"
+        type="button"
+        class="btn mr-auto"
+        :disabled="!canReset"
+        title="恢复内置的字体栈与选择器过滤（保存后生效）"
+        @click="resetToBuiltin"
+      >
+        重置为默认
+      </button>
       <button type="button" class="btn" @click="emit('cancel')">取消</button>
       <button type="button" class="btn btn-primary" @click="emit('save')">保存</button>
     </div>

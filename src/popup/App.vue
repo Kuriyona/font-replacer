@@ -5,7 +5,7 @@ import { missingFontIssues, probeLocalFont } from "@/content/issues";
 import { resolveSiteRules } from "@/shared/rules";
 import { findEffectiveSite } from "@/shared/sites";
 import { toRegistrableDomain } from "@/shared/site-domains";
-import { loadConfig, saveSite, subscribeConfig } from "@/shared/storage";
+import { ensureBuiltinRules, loadConfig, saveSite, subscribeConfig } from "@/shared/storage";
 import type { PageIssue, Rule, SiteRule } from "@/shared/types";
 import ConfirmDialog from "@/ui/components/ConfirmDialog.vue";
 import IssueBanner from "@/ui/components/IssueBanner.vue";
@@ -193,6 +193,7 @@ onMounted(async () => {
         supported.value = true;
       }
     }
+    await ensureBuiltinRules();
     await reload();
   } catch (err) {
     error.value = messageOf(err);

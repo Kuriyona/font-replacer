@@ -1,4 +1,5 @@
 import type { FontCache, Rule, SiteRule } from "./types";
+import { isBuiltinRuleId, pendingBuiltinRules } from "./builtin-rules";
 import { normalizeRule } from "./rules";
 import { normalizeSite } from "./sites";
 
@@ -59,6 +60,16 @@ export async function loadConfig(): Promise<{ rules: Rule[]; sites: SiteRule[] }
   return { rules, sites };
 }
 
+/** 写入缺失的内置规则，并升级从未保存过的旧默认值；用户改过的不动 */
+export async function ensureBuiltinRules(): Promise<void> {
+  const { rules } = await loadConfig();
+  const pending = pendingBuiltinRules(rules);
+  if (pending.length === 0) return;
+  const values: Record<string, Rule> = {};
+  for (const rule of pending) values[RULE_PREFIX + rule.id] = rule;
+  await writeSync(values);
+}
+
 export async function saveRule(rule: Rule): Promise<void> {
   if (JSON.stringify(rule).length > ITEM_QUOTA_BYTES) {
     throw new Error("规则过大，超出单条 8KB 同步上限");
@@ -66,8 +77,9 @@ export async function saveRule(rule: Rule): Promise<void> {
   await writeSync({ [RULE_PREFIX + rule.id]: rule });
 }
 
-/** 删除规则，并把引用它的站点条目里的引用一并去掉 */
+/** 删除规则，并把引用它的站点条目里的引用一并去掉；内置规则不可删除 */
 export async function deleteRule(id: string): Promise<void> {
+  if (isBuiltinRuleId(id)) throw new Error("内置规则不可删除");
   const { sites } = await loadConfig();
   const updates: Record<string, SiteRule> = {};
 

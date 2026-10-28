@@ -1,6 +1,6 @@
 import { absolutizeCssUrls } from "../shared/css-urls";
 import type { CssOpResult, FetchCssResult } from "../shared/messages";
-import { ensureSchemaVersion } from "../shared/storage";
+import { ensureBuiltinRules, ensureSchemaVersion } from "../shared/storage";
 
 const cssCache = new Map<string, string>();
 const MAX_CSS_LENGTH = 2_000_000;
@@ -113,4 +113,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   void ensureSchemaVersion();
+  void ensureBuiltinRules();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void ensureBuiltinRules();
 });

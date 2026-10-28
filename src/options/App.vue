@@ -8,6 +8,7 @@ import { toRegistrableDomain } from "@/shared/site-domains";
 import {
   deleteRule,
   deleteSite,
+  ensureBuiltinRules,
   loadConfig,
   loadFontCache,
   saveRule,
@@ -16,6 +17,7 @@ import {
   subscribeConfig,
   subscribeFontCache,
 } from "@/shared/storage";
+import { isBuiltinRuleId } from "@/shared/builtin-rules";
 import { selectorCount, validateRuleDraft } from "@/shared/rules";
 import type { FontCache, Rule, SiteRule } from "@/shared/types";
 import RuleEditor from "@/ui/components/RuleEditor.vue";
@@ -174,6 +176,11 @@ async function saveRuleDraft(): Promise<void> {
   }
 }
 
+function onRuleReset(): void {
+  error.value = "";
+  notice.value = "已恢复内置默认值，保存后生效";
+}
+
 async function removeRule(): Promise<void> {
   const draft = ruleDraft.value;
   if (!draft) return;
@@ -319,6 +326,7 @@ const formatTime = (value: number): string => new Date(value).toLocaleString("zh
 
 onMounted(async () => {
   try {
+    await ensureBuiltinRules();
     await loadAll();
     fontCache.value = await ensureFontCache();
   } catch (err) {
@@ -403,6 +411,11 @@ onUnmounted(() => {
             >
               <span class="flex items-center gap-1.5">
                 <span class="truncate text-sm">{{ rule.name }}</span>
+                <span
+                  v-if="isBuiltinRuleId(rule.id)"
+                  class="shrink-0 rounded bg-bg px-1 text-[10px] text-muted"
+                  >内置</span
+                >
                 <span v-if="!rule.enabled" class="rounded bg-bg px-1 text-[10px] text-muted"
                   >停用</span
                 >
@@ -433,9 +446,11 @@ onUnmounted(() => {
           :font-cache="fontCache"
           :missing="missingByRule.get(ruleDraft.id) ?? []"
           :usage-count="ruleUsage(ruleDraft.id)"
+          :builtin="isBuiltinRuleId(ruleDraft.id)"
           @save="saveRuleDraft"
           @cancel="closeRule"
           @delete="removeRule"
+          @reset="onRuleReset"
         />
         <SectionCard v-else>
           <p class="text-sm text-muted">从左侧选择一条规则，或新建规则。</p>
