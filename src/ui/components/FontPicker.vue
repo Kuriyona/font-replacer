@@ -15,8 +15,15 @@ const props = defineProps<{ cache: FontCache | null }>();
 const emit = defineEmits<{ select: [font: RuleFont]; cancel: [] }>();
 
 const MAX_RENDER = 200;
+const MAX_SUMMARY_STYLES = 3;
 const open = ref(true);
 const search = ref("");
+
+const summarizeStyles = (styles: string[]): string => {
+  if (styles.length <= MAX_SUMMARY_STYLES) return styles.join(" / ");
+  const shown = styles.slice(0, MAX_SUMMARY_STYLES).join(" / ");
+  return `${shown} +${styles.length - MAX_SUMMARY_STYLES}`;
+};
 
 const matches = computed(() => {
   const query = search.value.trim().toLowerCase();
@@ -77,11 +84,15 @@ const pickCustom = (): void => {
             :value="item.family"
             class="flex cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-sm data-[highlighted]:bg-accent-soft"
           >
-            <span class="truncate" :style="{ fontFamily: `'${item.family}'` }">
+            <span class="min-w-0 truncate" :style="{ fontFamily: `'${item.family}'` }">
               {{ item.family }}
             </span>
-            <span v-if="item.styles.length" class="shrink-0 text-xs text-muted">
-              {{ item.styles.join(" / ") }}
+            <span
+              v-if="item.styles.length"
+              class="max-w-[60%] shrink-0 truncate text-right text-xs text-muted"
+              :title="item.styles.join(' / ')"
+            >
+              {{ summarizeStyles(item.styles) }}
             </span>
           </ComboboxItem>
         </ComboboxViewport>
