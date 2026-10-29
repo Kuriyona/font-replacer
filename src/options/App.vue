@@ -381,7 +381,7 @@ onUnmounted(() => {
   <div class="mx-auto max-w-[1100px] p-6 text-sm">
     <header class="mb-4 flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="text-lg font-medium">Font Refine</h1>
+        <h1 class="text-lg font-medium">Font Replacer by Kuriyona</h1>
         <p class="text-xs text-ds-muted">
           按站点替换网页字体：读取本机字体、规则排序、自定义 CSS 与选择器过滤。
         </p>

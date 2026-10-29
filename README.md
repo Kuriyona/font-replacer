@@ -1,4 +1,4 @@
-# Font Refine
+# Font Replacer by Kuriyona
 
 按站点替换网页字体的 Chromium 扩展（Manifest V3）。
 

@@ -176,8 +176,8 @@ importers:
         specifier: ^5.0.4
         version: 5.0.4(vue@3.5.44(typescript@5.9.3))
       '@sharpdotnut/dotsharp':
-        specifier: ^1.0.0
-        version: 1.0.0(vue@3.5.44(typescript@5.9.3))
+        specifier: ^1.1.0
+        version: 1.1.0(vue@3.5.44(typescript@5.9.3))
       es-toolkit:
         specifier: ^1.53.0
         version: 1.53.0
@@ -656,8 +656,8 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@sharpdotnut/dotsharp@1.0.0':
-    resolution: {integrity: sha512-i3Zr+DOXF3nRgpiWWNmTd/5LFnVnMlq4UJs1bKBKMB9CjIusXHXRfcEll7J0mC7VM4rlGU75Ea7DPxwPG5VHRA==}
+  '@sharpdotnut/dotsharp@1.1.0':
+    resolution: {integrity: sha512-TJ24n4FKLN2PswdanSkA9qaj1hjrOF4ZlUAWr6vFebw7Nq+0GswEeryHYL8H6EG+vYkZ9bxilJF5qJ9vtfPP1g==}
     peerDependencies:
       vue: ^3.5.0
 
@@ -1813,7 +1813,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@sharpdotnut/dotsharp@1.0.0(vue@3.5.44(typescript@5.9.3))':
+  '@sharpdotnut/dotsharp@1.1.0(vue@3.5.44(typescript@5.9.3))':
     dependencies:
       '@iconify/vue': 5.0.4(vue@3.5.44(typescript@5.9.3))
       '@material/material-color-utilities': 0.3.0

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Font Refine",
+  "name": "Font Replacer by Kuriyona",
   "version": "0.1.0",
   "description": "按站点替换网页字体：读取本机字体、规则排序、自定义 CSS 与选择器过滤。",
   "minimum_chrome_version": "120",
@@ -8,7 +8,7 @@
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
-    "default_title": "Font Refine",
+    "default_title": "Font Replacer by Kuriyona",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

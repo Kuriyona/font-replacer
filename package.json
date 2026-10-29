@@ -1,5 +1,5 @@
 {
-  "name": "font-refine",
+  "name": "font-replacer-by-kuriyona",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
   "dependencies": {
     "@iconify-icons/material-symbols": "^2.0.7",
     "@iconify/vue": "^5.0.4",
-    "@sharpdotnut/dotsharp": "^1.0.0",
+    "@sharpdotnut/dotsharp": "^1.1.0",
     "es-toolkit": "^1.53.0",
     "postcss": "^8.5.32",
     "postcss-value-parser": "^4.2.0",

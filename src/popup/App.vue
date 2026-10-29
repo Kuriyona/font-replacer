@@ -221,7 +221,7 @@ onUnmounted(() => {
 <template>
   <div class="w-[380px] p-3 text-sm">
     <header class="mb-3 flex items-center justify-between gap-2">
-      <h1 class="text-base font-medium">Font Refine</h1>
+      <h1 class="text-base font-medium">Font Replacer by Kuriyona</h1>
       <span class="truncate text-xs text-ds-muted">{{ hostname }}</span>
     </header>
 

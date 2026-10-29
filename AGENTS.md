@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Font Refine：Manifest V3 Chromium 扩展，按站点替换网页字体。Vue 3 + Vite+（`vite-plus`）+ Tailwind v4 + dotsharp。
+Font Replacer by Kuriyona：Manifest V3 Chromium 扩展，按站点替换网页字体。Vue 3 + Vite+（`vite-plus`）+ Tailwind v4 + dotsharp。
 
 ## 命令
 

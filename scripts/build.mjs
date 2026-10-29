@@ -33,7 +33,7 @@ await build({
     lib: {
       entry: path.join(root, "src/content/index.ts"),
       formats: ["iife"],
-      name: "FontRefineContent",
+      name: "FontReplacerContent",
       fileName: () => "content.js",
     },
     rollupOptions: { output: { inlineDynamicImports: true } },

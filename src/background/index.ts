@@ -70,7 +70,7 @@ async function handleReportIssues(
     await chrome.action.setBadgeBackgroundColor({ tabId, color: "#b91c1c" });
     await chrome.action.setTitle({
       tabId,
-      title: count > 0 ? `Font Refine：${count} 个警告` : "Font Refine",
+      title: count > 0 ? `Font Replacer by Kuriyona：${count} 个警告` : "Font Replacer by Kuriyona",
     });
     return { ok: true };
   } catch (err) {
@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener(
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status !== "loading") return;
   void chrome.action.setBadgeText({ tabId, text: "" });
-  void chrome.action.setTitle({ tabId, title: "Font Refine" });
+  void chrome.action.setTitle({ tabId, title: "Font Replacer by Kuriyona" });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
